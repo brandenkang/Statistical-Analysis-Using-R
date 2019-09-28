@@ -1,0 +1,272 @@
+---
+title: "An Analysis of Potential Predictors of Maternal Mortality Ratio and Fertility Rate"
+output: html_document
+---
+
+Name: Branden Do Hyun Kang 
+Net ID: dhk416 
+
+#Introduction 
+This analysis report focuses on two outcome variables: maternal mortality ratio and fertility rate, and explores whether these outcome variables have a causal relationship with predictors such as the precentage of women receiving prenatal care, the prevalence of contraceptive methods, and the prevalence of anemia among women of reproductive age. The predictor that I have chosen to focus on for this report is the prevalence of anemia among women of reproductive age. The reason behind this is that anemia is a condition that often develops during pregnancy, when a woman's blood lacks enough healthy red blood cells or hemoglobin due to the excess amount of blood her body produces to help provide nutrients for the baby. Anemia has been reported as one of the leading causes of maternal deaths, and because it most directly affects the health of pregnant women (among the other predictor variables) and has been known to cause maternal deaths, it would be interesting to explore whether anemia also has an effect on fertility rates. I assume that there will be a positive relationship between the percentage of women receiving prenatal care and the fertility rate, a negative relationship between the percentage of women receiving prenatal care and the maternal mortality ratio, a negative relationship between contraceptive prevalence and maternal mortality ratio (perhaps due to a decrease in HIV/AIDS) and a negative relationship between contraceptive prevalence and fertility rate, and a positive relationship between the prevalence of anemia among women of reproductive age and maternal mortality ratio, and a negative relationship between the prevalence of anemia among women of reproductive age and fertility rate. In order to conduct the analysis I have used several statistical methods, to fit regression models based on the outcome variables, using an F-test to compare them, analyzing the confidence intervals for the central predictor variable, comparing p-values and R-squared values, and plotting and interpreting the regression diagnostic plots for differences between the models. 
+
+```{r}
+library(tidyverse)
+library(wbstats)
+```
+#Choosing the outcome and predictor variables 
+#Units of measurement for variables 
+```{r}
+#outcome variables 
+wbsearch(pattern = "maternal mortality ratio")
+wbsearch(pattern = "fertility rate")
+
+#1. Maternal mortality ratio (modeled estimate, per 100,000 live births)
+#2. Fertility rate, total (births per woman)
+
+#predictor variables
+wbsearch(pattern = "prenatal care")
+wbsearch(pattern = "contraceptive prevalence")
+wbsearch(pattern = "pregnant women")
+
+#1.Pregnant women receiving prenatal care (%)
+#2.Contraceptive prevalence, any methods (% of women ages 15-49)
+#3.Prevalence of anemia among women of reproductive age (% of women ages 15-49)
+
+```
+
+```{r}
+wb_variables <- c("SH.STA.MMRT",
+                  "SP.DYN.TFRT.IN",
+                  "SH.STA.ANVC.ZS",
+                  "SP.DYN.CONU.ZS",
+                  "SH.ANM.ALLW.ZS")
+                  
+wb_names <- c("maternalmort",
+              "fertilityrate",
+              "prenatalcare",
+              "contraceptives",
+              "anemia")
+   
+wb_data <- wb(country = "all", indicator = wb_variables,
+          startdate = 2007, enddate = 2018, return_wide = TRUE)
+
+wb_recent <- wb_data %>%
+  rename_at(vars(wb_variables), ~ wb_names) %>% # rename
+  drop_na() %>%                                 # remove missing
+  group_by(country) %>%
+  arrange(date) %>%
+  top_n(1) %>%
+  ungroup()
+
+# Countries included
+wb_recent$country
+
+# Number of countries included
+nrow(wb_recent)  
+```
+
+#First Outcome Variable
+ 
+#Regression model 1 with maternal mortality ratio as the outcome, using all predictors
+```{r}
+#fit model
+model1 <- lm(maternalmort ~ prenatalcare + contraceptives + anemia, wb_recent)
+
+#show summaries
+summary(model1)
+#P-value for chosen predictor (anemia): 0.003
+#Adjusted R-squared: 0.537
+```
+
+#Regression model 2 with maternal mortality ratio as the outcome, using prevalence of prenatal care and anemia as predictors
+```{r}
+#fit model
+model2 <- lm(maternalmort ~ prenatalcare + anemia, wb_recent)
+
+#show summaries
+summary(model2)
+#P-value for chosen predictor (anemia): 1.16e -10 
+#Adjusted R-squared: 0.398
+```
+#Interpretation of summaries: Model 1 
+
+##Estimates 
+The values for the coefficients of model 1 indicate that for every 1% increase in the prevalence of anemia among women of reproductive age, the maternal mortality ratio (modeled per 100,000 live births) increases by 5.481. On the other hand, for every 1% increase in pregnant women receiving prenatal care (%), the maternal mortality ratio decreases by 3.406, and for every 1% increase in contraceptive prevalence (% of women ages 15-49), the maternal mortality ratio decreases by 6.282. 
+
+##Standard Errors 
+The Standard Error can be used to compute an estimate of the expected difference in case we ran the model multiple times. We've already interpreted that for every 1% increase in the prevalence of anemia among women of reproductive age, the maternal mortality ratio (modeled per 100,000 live births) increases by 5.481. We can say that for every 1% increase in the prevalence of anemia, the change in maternal mortality ratio can vary by 1.814. And for every 1% increase in pregnant women receiving prenatal care and in the prevalence of contraception, the change in maternal mortality ratio can vary by 1.309 and 0.925 accordingly. 
+
+##t-value 
+The t-value is a measure of how many standard deviations our coefficient estimate is far away from 0. We want it to be far away from zero as this would indicate we could reject the null hypothesis - that is, we could deduce that a relationship between the predictors and the outcome exists. In our model, the t-statistic values are relatively slightly far from zero and are larger than the standard error, which could indicate a relationship exists.
+
+##p-value 
+A small p-value indicates that it is unlikely we will observe a relationship between the predictors (anemia / prenatal care / contraceptives) and outcome (maternal mortality) due to chance. We will use a p-value of 0.05 or less as the cut-off point. In our model, the p-values for the intercept and the slope are very close to zero (<0.05). which indicates that we can reject the null hypothesis which allows us to conclude that there is a relationship between the predictors (anemia / prenatal care / contraceptives) and outcome (maternal mortality ratio). 
+
+#Interpretation of summaries: Model 2 
+The values for the coefficients of model 2 indicate that for every 1% increase in the prevalence of anemia among women of reproductive age, the maternal mortality ratio (modeled per 100,000 live births) increases by 12.094. On the other hand, for every 1% increase in pregnant women receiving prenatal care(%), the maternal mortality ratio decreases by 5.302. 
+
+##Standard Errors
+We can say that for every 1% increase in the prevalence of anemia, the change in maternal mortality ratio can vary by 1.745. And for every 1% increase in pregnant women receiving prenatal care, the change in maternal mortality ratio can vary by 1.459. 
+
+##t-value 
+The t-value is a measure of how many standard deviations our coefficient estimate is far away from 0. We want it to be far away from zero as this would indicate we could reject the null hypothesis - that is, we could deduce that a relationship between the predictors and the outcome exists. In our model, the t-statistic values are relatively slightly far from zero and are larger than the standard error, which could indicate a relationship exists.
+
+##p-value 
+In our model, the p-values for the intercept and the slope are very close to zero (<0.05). which indicates that we can reject the null hypothesis which allows us to conclude that there is a relationship between the predictor (anemia) and outcome (maternal mortality ratio). 
+
+##Adjusted R-squared
+The adjusted R-squared value for model 1 is 0.537, while the value for model 2 is  0.398. Model 1 has the higher R-squared value, indicating that model 1 fits the data better than model 2. 
+
+#F-test
+```{r}
+anova(model1,model2) 
+
+#The test chooses model 1 (the full model) over the reduced model (model 2) because the p-value is smaller than 0.05. 
+#The data supports that the coefficients not shared between the models are not zero.
+
+```
+
+```{r}
+confint(model1,level=0.95)
+confint(model2,level=0.95)
+
+```
+#Interpreting confidence intervals 
+The output indicates that a 95% confidence interval for our intercept estimate is [377.639302, 975.2114463] for model 1 and [14.121711 656.919534] for model 2. This means that we can be 95% certain that our intercept value will fall between these values for model 1 and model 2, and that if multiple confidence intervals were constructed for our intercept estimate, 95% of the intervals would include the true intercept value. 
+
+The confidence interval for our main predictor estimate (anemia) is [1.897334, 9.0654765] for model 1 and [8.646405,  15.542274] for model 2, which means that we can be 95% certain that the value of our anemia slop will fall between these values, and that if multiple confidence intervals were constructed for our slope estimate, 95% of the intervals would include the true value.
+
+#statistical and practical significance of the main predictor (prevalence of anemia)
+Since the p-value of the main predictor (prevalence of anemia) is very close to zero (<0.05) in both models, we can conclude that the predictor is statistically significant - there is a significant relationship between the prevalence of anemia among women of reproductive age and maternal mortality ratio. Practical significance refers to the relationship between the variables and the real world situation, and is generally assessed with some measure of effect size and external factors like cost and time. In our example, we are trying to measure the effect that the prevalence of anemia in women of reproductive age on the population's maternal mortality ratio. At a first glance, it seems unlikely that the prevalence of anemia, which is one of the leading causes of maternal deaths in women, has no effect on the overall maternal mortality ratio. Based on the values of the 95% confidence intervals - we know that for every 1% increase in the prevalence of anemia among women, there will be between a 1.897334% to 9.0654765% increase in the maternal mortality ratio (model 1), and between a %8.646405 to %15.542274 increase in the maternal mortality ratio (model 2), which indicate a degree of practical significance. 
+
+#Diagnostic plots
+```{r}
+par(mfrow=c(2,2)) 
+plot(model1)
+plot(model2)
+
+```
+#Interpretation of the regression diagnostic plots
+
+##Residuals vs. Fitted
+In both models, there is no pattern in the residual plot and the line is approximately horizontal at zero. This suggests that we can assume linear relationship between the predictors and the outcome variables. While in model 1 the line curves slightly upwards, the line steeps curves downwards and the points more more clustered towards the left in model 2.
+
+##Scale-Location
+This plot is used to check the homogeneity of variance of the residuals (homoscedasticity). A horizontal line with equally spread points is a good indication of homoscedasticity. This is not the case in our models. In both of the models, the residuals begin to spread wider along the x-axis as it passes around 500. Due to the residuals spreading wider apart after this point, the red line is not horizontal and shows a positive angle. This problem is more evident in model 2. 
+
+##Normal Q-Q
+This plot is used to examine whether the residuals are normally distributed. It is ideal if the residuals points follow the dotted line. In both models, almost all of the points fall approximately along this reference line, so we can assume normality. There is a potential outlier in both models (#34). 
+
+##Residuals vs. Leverage 
+This plot is used to identify influential values that might influence the regression results when included or excluded from the analysis. We are looking for data points outside of the Cook's distance dashed line, which have high Cook's distance scores and are influential to the regression results. In both models, there are data points that are far beyond the Cook's distance lines (#34, #52 in model 1) (#34, #66 in model 2), and the other residual points seem clustered towards the left. The slop coefficient will change if we exclude these points from the analysis. The most prominent outlier in the models (#34) is Sierra Leone. A possible explanation for Sierra Leone being the most prominent outlier is that Sierra Leone ranks first in the world for maternal mortality ratio (1360 deaths/100,000 live births (2015 est.)).  
+
+##Summary of overall conclusions
+Given the interpretations of the coefficients for the chosen predictor variable (prevalence of anemia among women of reproductive age), both models match my initial predictions that there is a positive relationship between the prevalence of anemia and the maternal mortality ratio among women, which is both statistically and practically significant.The results further matched my expectations about the negative relationship between the remaining predictor variables and the outcome, as they indicated that the maternal mortality ratio decreases as the % of pregnant women receiving prenatal care and the prevalence of contraception increase. Based on the r-squared values and F-test, the full model (model 1) appears to better represent the data / tell the most accurate story than model 2, which excluded the prevalence of contraception predictor variable. The estimated value of the main predictor variable (anemia) is smaller in model 1 compared to model 2. Perhaps this is because the prevalence of contraception led to a reduced maternal mortality ratio, causing a greater increase in the maternal mortality ratio per every 1% increase in the prevalence of anemia in model 2, which did not account for the prevalence of contraception in the population. 
+
+
+#Second Outcome Variable 
+
+ 
+#Regression model 1 with fertility rate as the outcome, using all predictors
+```{r}
+#fit model
+model2.1 <- lm(fertilityrate ~ prenatalcare + contraceptives + anemia, wb_recent)
+
+#show summaries
+summary(model2.1)
+#P-value for chosen predictor (anemia): 0.003
+#Adjusted R-squared: 0.537
+```
+
+#Regression model 2 with fertility rate as the outcome, using prevalence of prenatal care and anemia as predictors
+```{r}
+#fit model
+model2.2 <- lm(fertilityrate ~ prenatalcare + anemia, wb_recent)
+
+#show summaries
+summary(model2.2)
+#P-value for chosen predictor (anemia): 1.16e -10 
+#Adjusted R-squared: 0.398
+```
+#Interpretation of summaries: Model 1 
+
+##Estimates 
+The values for the coefficients of model 1 indicate that for every 1% increase in the prevalence of anemia among women of reproductive age, the fertility rate, total (births per woman) increases by 0.018960. On the other hand, for every 1% increase in pregnant women receiving prenatal care (%), the fertility rate decreases by 0.010615, and for every 1% increase in contraceptive prevalence (% of women ages 15-49), the fertility rate decreases by 0.044911 
+
+##Standard Errors 
+We've already interpreted that for every 1% increase in the prevalence of anemia among women of reproductive age, the fertility rate increases by 0.018960. We can say that for every 1% increase in the prevalence of anemia, the change in fertility rate can vary by 0.008437. And for every 1% increase in pregnant women receiving prenatal care and in the prevalence of contraception, the change in maternal mortality ratio can vary by 0.006089 and 0.004304 accordingly. 
+
+##t-value 
+The t-value is a measure of how many standard deviations our coefficient estimate is far away from 0. We want it to be far away from zero as this would indicate we could reject the null hypothesis - that is, we could deduce that a relationship between the predictors and the outcome exists. In our model, the t-statistic values are slightly far from zero and are larger than the standard error, which could indicate a relationship exists.
+
+##p-value 
+A small p-value indicates that it is unlikely we will observe a relationship between the predictors (anemia / prenatal care / contraceptives) and outcome (fertility rate) due to chance. We will use a p-value of 0.05 or less as the cut-off point. In our model, the p-values for the intercept and the slope are very close to zero (<0.05). which indicates that we can reject the null hypothesis which allows us to conclude that there is a relationship between the predictors (anemia / prenatal care / contraceptives) and outcome (fertility rate). 
+
+#Interpretation of summaries: Model 2 
+The values for the coefficients of model 2 indicate that for every 1% increase in the prevalence of anemia among women of reproductive age, the fertility rate, total (births per woman) increases by 0.066240. On the other hand, for every 1% increase in pregnant women receiving prenatal care(%), the fertility rate decreases by 0.024168. 
+
+##Standard Errors
+We can say that for every 1% increase in the prevalence of anemia, the change in fertility rate can vary by 0.009332. And for every 1% increase in pregnant women receiving prenatal care, the change in maternal mortality ratio can vary by 0.007801. 
+
+##t-value 
+In our model, the t-statistic values are slightly far from zero and are larger than the standard error, which could indicate a relationship exists.
+
+##p-value 
+In our model, the p-values for the intercept and the slope are very close to zero (<0.05). which indicates that we can reject the null hypothesis which allows us to conclude that there is a relationship between the predictor (anemia) and outcome (fertility rate). Whether the relationship is practically significant will be discussed below.
+
+##Adjusted R-squared
+The adjusted R-squared value for model 1 is 0.6427, while the value for model 2 is 0.3857. Model 1 has the higher R-squared value, indicating that model 1 fits the data better than model 2. 
+
+
+#F-test
+```{r}
+anova(model2.1,model2.2) 
+
+#The test chooses model 1 (the full model) over the reduced model (model 2) because the p-value is smaller than 0.05. 
+#The data supports that the coefficients not shared between the models are not zero.
+```
+
+```{r}
+confint(model2.1,level=0.95)
+confint(model2.2,level=0.95)
+
+```
+#Interpreting confidence intervals 
+The output indicates that a 95% confidence interval for our intercept estimate is [4.409168898, 7.188817096] for model 1 and [1.64279520  5.080548283] for model 2. This means that we can be 95% certain that our intercept value will fall between these values for model 1 and model 2, and that if multiple confidence intervals were constructed for our intercept estimate, 95% of the intervals would include the true intercept value. 
+
+The confidence interval for our main predictor estimate (anemia) is [0.002288373, 0.035631485] for model 1 and [0.04779961, 0.084679472] for model 2, which means that we can be 95% certain that the value of our anemia slop will fall between these values, and that if multiple confidence intervals were constructed for our slope estimate, 95% of the intervals would include the true value.
+
+#statistical and practical significance of the main predictor (prevalence of anemia)
+Since the p-value of the main predictor (prevalence of anemia) is very close to zero (<0.05) in both models, we can conclude that the predictor is statistically significant - there is a significant relationship between the prevalence of anemia among women of reproductive age and fertiliy rate. Practical significance refers to the relationship between the variables and the real world situation, and is generally assessed with some measure of effect size and external factors like cost and time. In our example, we are trying to measure the effect that the prevalence of anemia in women of reproductive age on the population's fertility rate. Based on the values of the 95% confidence intervals - we know that for every 1% increase in the prevalence of anemia among women, there will be between a 0.002288373 to 0.035631485 increase in the fertility rate (model 1), and between a 0.04779961 to 0.084679472 increase in the fertility rate (model 2). At a first glance, it seems impossible that having more women suffer from anemia leads to an increased fertility rate in the population, and having more prenatal care leads to a decreased fertility rate. Based on the units of the variables, although the data indicates statistical significance, a 1% increase in the prevalence of anemia leads to less than 0.085 increase in births per woman. Unlike the models of the first outcome variable that measured the relationship between the predictors and the maternal mortality ratio, the relationship between the predictors and the second outcome variable, fertility rate, seems practically insignificant.  
+
+
+#Diagnostic plots
+```{r}
+par(mfrow=c(2,2)) 
+plot(model2.1)
+plot(model2.2)
+
+```
+#Interpretation of the regression diagnostic plots
+
+##Residuals vs. Fitted
+In both models, there is no pattern in the residual plot and the line is approximately horizontal at zero. This suggests that we can assume linear relationship between the predictors and the outcome variables. 
+
+##Scale-Location
+In model 1, there are several areas where the points are clustered together, and in model 2, the residuals begin to spread wide along the x-axis as it passes around 4. Due to the residuals spreading wider apart after this point, the red line is not horizontal and shows a slightly positive angle. 
+
+##Normal Q-Q
+In both models, almost all of the points fall approximately along this reference line, so we can assume normality.
+
+##Residuals vs. Leverage 
+We are looking for data points outside of the Cook's distance dashed line, which have high Cook's distance scores and are influential to the regression results. Although #21 is located beyond the Cook's distance lines in model 1 and 2, there seems to be no prominent outliers in both models, unlike the regression diagnostic plot of the first outcome variable, in which #34 (Sierra Leone) was a prominent outlier in the model, possibly due to its extremely high maternal mortality ratio. 
+
+##Summary of overall conclusions
+Given the interpretations of the coefficients for the chosen predictor variable (prevalence of anemia among women of reproductive age), both models do not match my initial predictions that there is a negative relationship between the prevalence of anemia among women of reproductive age and fertility rate. While the results indicated a positive relationship that was statistically significant, the relationship does not seem practically significant given the units of the outcome variable being total births per woman. The results also did not match my expectations about the positive relationship between pregnant women receiving prenatal care and fertility rate, as there was a negative relationship that also seems practically insignificant. The results did match my initial expectation that there will be a negative relationship between the prevalence of contraceptives and fertility rate. Based on the r-squared values and F-test, the full model (model 1) appears to better represent the data / tell the most accurate story than model 2, which excluded the prevalence of contraceptives predictor variable. The estimated value of the main predictor variable (anemia) is smaller in model 1 compared to model 2. Perhaps this is because the prevalence of contraceptives led to a reduced fertility rate, causing a greater increase in the fertility rate per every 1% increase in the prevalence of anemia in model 2, which did not account for the prevalence of contraceptives in the population. 
+
+#Conclusion 
+My initial predictions for the first outcome variable was the following: As the prevalence of anemia among women of reproductive age increases, there will be an increase in the maternal mortality ratio, indicating a positve relationship between the predictor and outcome variables. I further predicted that as the % of pregnant women receiving prenatal care and the prevalence of contraceptives among women of reproductive age increases, there will be a decrease in the maternal mortality ratio, indicating a negative relationship between the predictor and outcome variables. The results generally matched my predictions, and I am inclined to declare a causal relationship between the prevalence of anemia and the maternal mortality ratio. In interpreting the regression diagnostic plots for the first outcome variable, I found an outlier - Sierra Leone, which was found as having the highest maternal mortality ratio in the world and likely influenced the results. 
+
+The results of the data based on the second outcome variable was interesting. I initially predicted that as the prevalence of anemia among women of reproductive age increases, there will be a decrease in the fertility rate, showing a negative relationship between the predictor and outcome variables. I further predicted that as the % of pregnant women receiving prenatal care increases, there will be an increase in the fertility rate, and as the prevalence of contraceptives among women of reproductive age increases, there will be a decrease in the fertility rate, especially in developing countries. The results generally did not match my predictions, as increased prevalence of anemia actually led to an increased fertiltiy rate, and increased prenatal care led to a decreased fertility rate. Increased prevalence of contraceptives did lead to a decrease in fertility rate. Although these results were statistically significant, accounting for the units of the outcome variable (total births per woman) suggests that the relationship is not practically significant, making it difficult to arrive at a causal conclusion between the predictor variables and the outcome. Finding a minimally positive relationship between the prevalence of anemia and the fertility rate was surprising, as it indicates that anemia does not affect fertility (although the relationship is positive it does not seem reasonable that anemia actually increases fertility). It was also interesting to see that increased prenatal care among pregnant women led to a reduced fertility rate (although practically insignificant), making me rethink the assumption that prenatal care was an important factor in ensuring safe childbirth and that therefore changes in the availability of prenatal care would affect the fertility rate. It was also interesting to note that model 2, which did not account for the prevalence of contraceptives, showed a larger increase in fertility rate per % increase in prevalence of anemia, which could suggest that the use of contraceptives does in fact have a rather significant effect on the fertility rate. 
+
+
